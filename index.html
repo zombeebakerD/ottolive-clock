@@ -6,12 +6,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#393a34">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Ottolive clock-in</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ovo&family=Open+Sans:wght@400;600;700&display=swap">
 <style>
   /*
-   * Clock-in terminal for the production-room iPad. Lives outside Apps Script so that the page may use the front
+   * Clock-in terminal for the production-room tablet. Lives outside Apps Script so that the page may use the front
    * camera (Google's frame around Apps Script pages blocks it). Same look as the app: ink header, Ovo + Open Sans,
    * colour only where it means something (green = in, amber = due / on a break, red = problem).
    */
@@ -140,7 +143,7 @@ function home() {
   if (!st) return h + '<div class="card">Loading…</div>';
   var locked = st.deviceLocked && !st.paired;
   h += '<h1>Clock in</h1>';
-  if (locked) h += '<div class="card amber"><b>This iPad is not paired yet.</b><div class="note">A manager taps “Pair this iPad” below and enters their PIN. Until then nobody can clock in here.</div></div>';
+  if (locked) h += '<div class="card amber"><b>This tablet is not paired yet.</b><div class="note">A manager taps “Pair this tablet” below and enters their PIN. Until then nobody can clock in here.</div></div>';
   h += '<div class="big"><button class="btn" onclick="start(\'in\')"' + (locked ? ' disabled' : '') + '>Clock in</button>' +
        '<button class="btn brown" onclick="start(\'out\')"' + (locked ? ' disabled' : '') + '>Clock out</button>' +
        '<button class="btn ghost" onclick="start(\'breakStart\')"' + (locked ? ' disabled' : '') + '>Start break</button>' +
@@ -153,7 +156,7 @@ function home() {
     return '<span class="chip amber"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">rota’d from ' + esc(p.start) + '</span></span></span>';
   }).join('') + '</div></div>';
   h += '<footer><span>' + esc(st.site) + (st.paired && st.deviceLocked ? ' · paired clock-in point' : '') + '</span>' +
-       '<button type="button" onclick="start(\'pair\')">' + (st.paired && st.deviceLocked ? 'Re-pair this iPad' : 'Pair this iPad') + '</button></footer>';
+       '<button type="button" onclick="start(\'pair\')">' + (st.paired && st.deviceLocked ? 'Re-pair this tablet' : 'Pair this tablet') + '</button></footer>';
   return h;
 }
 function shot() {
@@ -169,7 +172,7 @@ function shot() {
     pad(label) + '</div>';
 }
 function pinScreen() {
-  var t = { 'in': ['Clock in', 'Your PIN clocks you in.'], out: ['Clock out', 'Your PIN clocks you out.'], breakStart: ['Start break', 'Your PIN starts your break.'], breakEnd: ['End break', 'Your PIN ends your break.'], pair: ['Pair this iPad', 'A manager’s PIN makes this iPad the clock-in point. From then on clocking in only works here.'] }[S.action];
+  var t = { 'in': ['Clock in', 'Your PIN clocks you in.'], out: ['Clock out', 'Your PIN clocks you out.'], breakStart: ['Start break', 'Your PIN starts your break.'], breakEnd: ['End break', 'Your PIN ends your break.'], pair: ['Pair this tablet', 'A manager’s PIN makes this tablet the clock-in point. From then on clocking in only works here.'] }[S.action];
   return '<h1>' + esc(t[0]) + '</h1><div class="note">' + esc(t[1]) + '</div><div class="shot"><div></div>' + pad(t[0]) + '</div>';
 }
 function pad(label) {
@@ -223,12 +226,12 @@ function send(body) {
   busy(true);
   var isPair = body.op === 'pair';
   api(body).then(function (r) {
-    if (isPair) { try { localStorage.setItem('ottoClockKey', r.deviceKey); } catch (e) {} showResult('This iPad is now the clock-in point.', false); return refresh(); }
+    if (isPair) { try { localStorage.setItem('ottoClockKey', r.deviceKey); } catch (e) {} showResult('This tablet is now the clock-in point.', false); return refresh(); }
     S.state = r; showResult(r.message, false);
   }).catch(function (e) {
     busy(false); S.pin = ''; key('clear');
     var el = $('err'); if (el) el.textContent = e.message; else showResult(e.message, true);
-    var g = $('goBtn'); if (g) g.textContent = S.action === 'pair' ? 'Pair this iPad' : { 'in': 'Clock in', out: 'Clock out', breakStart: 'Start break', breakEnd: 'End break' }[S.action];
+    var g = $('goBtn'); if (g) g.textContent = S.action === 'pair' ? 'Pair this tablet' : { 'in': 'Clock in', out: 'Clock out', breakStart: 'Start break', breakEnd: 'End break' }[S.action];
   });
 }
 function showResult(msg, bad) {
@@ -278,7 +281,7 @@ $('fileIn').addEventListener('change', function () {
   img.onerror = function () { URL.revokeObjectURL(url); busy(false); $('err').textContent = 'Could not read that photo. Try again.'; };
   img.src = url;
 });
-/** Pixelates and smooths the top `frac` of the canvas, so the face is gone before the picture leaves the iPad. */
+/** Pixelates and smooths the top `frac` of the canvas, so the face is gone before the picture leaves the tablet. */
 function blurTop(c, frac) {
   frac = frac == null ? 0.5 : Number(frac) || 0;
   if (frac > 0) {

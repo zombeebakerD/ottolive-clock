@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#393a34">
+<title>Ottolive clock-in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ovo&family=Open+Sans:wght@400;600;700&display=swap">
+<style>
+  /*
+   * Clock-in terminal for the production-room iPad. Lives outside Apps Script so that the page may use the front
+   * camera (Google's frame around Apps Script pages blocks it). Same look as the app: ink header, Ovo + Open Sans,
+   * colour only where it means something (green = in, amber = due / on a break, red = problem).
+   */
+  :root {
+    --ink: #393a34; --text: #2b2c27; --muted: #5e5d55; --brown: #8a6f55; --sand: #c9b6a3;
+    --bg: #fbf9f6; --tile: #dbd2c5; --rule: #e7e1d8; --wordmark: #f4efe6; --card: #ffffff;
+    --green: #5b7a4a; --amber: #b8862b; --red: #a94438;
+    --serif: Ovo, Georgia, 'Times New Roman', serif;
+    --sans: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 var(--sans); display: flex; flex-direction: column; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+  header { background: var(--ink); color: var(--wordmark); padding: calc(14px + env(safe-area-inset-top)) 24px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .wordmark { width: 150px; height: auto; display: block; }
+  .site { font: 600 11px/1.4 var(--sans); letter-spacing: 3px; text-transform: uppercase; color: var(--sand); margin-top: 4px; }
+  .clock { text-align: right; }
+  .clock .time { font: 44px/1 var(--serif); }
+  .clock .day { font: 600 12px/1.4 var(--sans); letter-spacing: 2px; text-transform: uppercase; color: var(--sand); }
+  main { flex: 1; padding: 20px 24px calc(20px + env(safe-area-inset-bottom)); max-width: 1100px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; min-height: 0; }
+  h1 { margin: 0; font: 34px/1.2 var(--serif); color: var(--ink); }
+  h2 { margin: 0; font: 26px/1.25 var(--serif); color: var(--ink); }
+  .note { color: var(--muted); font-size: 15px; }
+  .big { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .btn { border: 0; border-radius: 14px; background: var(--ink); color: #fff; font: 700 22px/1.2 var(--sans); min-height: 110px; padding: 18px; cursor: pointer; }
+  .btn.brown { background: var(--brown); }
+  .btn.ghost { background: var(--card); color: var(--ink); border: 1.5px solid var(--ink); min-height: 72px; font-size: 18px; }
+  .btn.small { min-height: 56px; font-size: 17px; border-radius: 10px; }
+  .btn:disabled { opacity: .55; }
+  .btn:focus-visible { outline: 3px solid var(--brown); outline-offset: 3px; }
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; }
+  .card.amber { border-left: 6px solid var(--amber); }
+  .card.red { border-left: 6px solid var(--red); }
+  .label { font: 600 11px/1.4 var(--sans); letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+  .label.green { color: var(--green); } .label.amber { color: var(--amber); }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--rule); border-radius: 999px; padding: 8px 16px 8px 8px; font-size: 16px; }
+  .chip .tag { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; background: var(--green); }
+  .chip.amber .tag { background: var(--amber); }
+  .chip .since { color: var(--muted); font-size: 13px; }
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  footer button { background: none; border: 0; color: var(--muted); font: 600 13px var(--sans); text-decoration: underline; cursor: pointer; padding: 8px 0; }
+
+  /* shot screen: viewfinder + PIN pad side by side when there is room, stacked on a portrait tablet */
+  .shot { display: grid; gap: 20px; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 900px) and (min-aspect-ratio: 1/1) { .shot { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); } }
+  .viewfinder { position: relative; width: min(100%, calc(min(62vh, 640px) * 3 / 4)); aspect-ratio: 3 / 4; background: #000; border-radius: 16px; overflow: hidden; margin: 0 auto; }
+  .viewfinder video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+  .viewfinder .veil { position: absolute; left: 0; top: 0; right: 0; height: 50%; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); background: rgba(251,249,246,.28); border-bottom: 2px dashed rgba(255,255,255,.8); }
+  .viewfinder .veil span { position: absolute; left: 14px; bottom: 8px; font: 600 13px var(--sans); color: #fff; text-shadow: 0 1px 3px #000; letter-spacing: .5px; }
+  .viewfinder .wait { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 15px; text-align: center; padding: 20px; }
+  .pad { display: flex; flex-direction: column; gap: 14px; }
+  .dots { display: flex; gap: 14px; justify-content: center; min-height: 26px; }
+  .dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); display: block; }
+  .dots i.on { background: var(--ink); }
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .keys button { border: 1px solid var(--rule); background: var(--card); border-radius: 12px; font: 600 28px/1 var(--sans); color: var(--ink); min-height: 68px; cursor: pointer; }
+  .keys button.fn { font-size: 16px; color: var(--muted); }
+  .keys button:active { background: var(--tile); }
+  .err { color: var(--red); font-weight: 600; min-height: 24px; }
+  .result { flex: 1; display: grid; place-items: center; text-align: center; }
+  .result .msg { font: 40px/1.2 var(--serif); color: var(--ink); max-width: 18ch; }
+  .result .tick { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px; background: var(--green); color: #fff; font-size: 48px; }
+  .result.bad .tick { background: var(--red); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4932.52 821.22" class="wordmark" role="img" aria-label="Ottolive" fill="currentColor"><g><polygon points="1757.65 8.87 804.98 6.71 804.98 24.96 1004.68 25.4 1004.68 808.61 1174.1 808.61 1174.1 28.09 1383.68 28.09 1383.68 808.61 1553.1 808.61 1553.1 26.5 1757.65 26.94 1757.65 8.87"></polygon><polygon points="2834.27 9.81 2667.05 9.81 2667.05 808.58 3268.49 808.58 3268.49 790.28 2834.27 790.28 2834.27 9.81"></polygon><rect x="3290.77" y="9.83" width="167.18" height="798.77"></rect><polygon points="3973.77 615.62 3678.86 9.81 3497.14 9.81 3889.63 809.37 3897.7 809.37 4291.33 9.81 4270.88 9.81 3973.77 615.62"></polygon><polygon points="4486.97 790.28 4486.97 409.35 4850.19 409.35 4850.19 391.01 4486.97 391.01 4486.97 28.1 4921.23 28.1 4921.23 9.81 4319.79 9.81 4319.79 808.58 4932.52 808.58 4932.52 790.28 4486.97 790.28"></polygon><path d="M638.87,47C574.6,15.79,502.41,0,424.22,0,346.74,0,274.94,15.79,210.68,47S94.54,125.36,56.81,187.07,0,324,0,410.61,19.13,572.46,56.81,634.16,146.33,743,210.68,774.23s136.06,47,213.54,47c78.24,0,150.43-15.82,214.65-47,64.39-31.2,116.18-78.36,153.86-140.07s56.82-136.94,56.82-223.55-19.09-161.88-56.82-223.54S703.26,78.2,638.87,47ZM605.19,687.32c-42,75.89-69.11,115.52-181,115.52-105.69,0-141.57-34.07-186.61-115.52C194.77,609.75,173,516.66,173,410.61s21.78-199.17,64.62-276.74c45-81.45,80.92-115.52,186.61-115.52,111.86,0,139,39.62,181,115.52,42.89,77.61,64.62,170.7,64.62,276.74S648.08,609.7,605.19,687.32Z"></path><path d="M2355,46.94C2290.76,15.78,2218.56,0,2140.33,0c-77.44,0-149.24,15.78-213.5,46.94S1810.65,125.35,1773,187.05,1716.15,324,1716.15,410.6s19.09,161.84,56.81,223.55S1862.48,743,1926.83,774.27s136.06,46.94,213.5,46.94c78.23,0,150.47-15.79,214.69-46.94A373.89,373.89,0,0,0,2410.29,741l6.17-4.49a366,366,0,0,0,92.42-102.39c37.69-61.71,56.81-136.9,56.81-223.55s-19.12-161.84-56.81-223.55S2419.41,78.19,2355,46.94ZM2321.34,687.3c-42,75.9-69.11,115.57-181,115.57-105.65,0-141.53-34.07-186.57-115.57-42.89-77.57-64.61-170.65-64.61-276.7s21.72-199.17,64.61-276.7c42.44-76.82,76.86-111.47,169.16-115.17-19.44,28.17-36.06,58.53-48.35,90.93-14.41,39.14-22.57,81.19-21,123.5s12.52,83.34,28.7,121.38S2119.7,428,2143.9,460.76c48.44,65.67,107,121.69,164.18,177.22,8.55,8.34,17,16.8,25.43,25.26C2329.63,671.39,2325.66,679.5,2321.34,687.3Zm18.47-37.9c-6.79-7.49-13.53-15-20.36-22.48-27.06-29.62-55-58.22-81.28-88s-51.3-60.52-73.38-93-41.87-66.38-56.11-102.34c-14.46-35.79-23-73.61-24.24-111.47s6.26-75.67,19.66-111.51c13.13-36,32.66-69.64,55-101.37l-.66-.48c96.79,4.18,123.28,43.5,162.9,115.12,42.84,77.57,64.62,170.66,64.62,276.7C2386,499.94,2370.31,580,2339.81,649.4Z"></path></g></svg>
+    <div class="site" id="site">Production</div>
+  </div>
+  <div class="clock"><div class="time" id="time">--:--</div><div class="day" id="day"></div></div>
+</header>
+<main id="main"></main>
+<input type="file" id="fileIn" accept="image/*" capture="user" hidden>
+<script>
+/* The app's web address (Deploy › Manage deployments). A different Sheet/app, e.g. the Bakehouse, can point its
+   own copy of this page elsewhere by storing ottoAppUrl in localStorage. */
+var APP_URL = 'https://script.google.com/macros/s/AKfycbxI70vt58yNEG9fnoV_ZDaBCa2Jq0_4edwIyv_A9-lAntrZYa4Q8SzgzUm3yExy9oAO/exec';
+try { APP_URL = localStorage.getItem('ottoAppUrl') || APP_URL; } catch (e) {}
+
+var S = { screen: 'home', state: null, pin: '', action: null, cam: null, camErr: null, busy: false, netErr: '' };
+var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+var IDLE_MS = 45000, RESULT_MS = 4500, REFRESH_MS = 60000;
+var idleTimer = null, resultTimer = null;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function hm(iso) { var d = new Date(iso); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function first(name) { return String(name || '').split(' ')[0]; }
+function initials(name) { return String(name || '').split(' ').map(function (p) { return p[0] || ''; }).join('').slice(0, 2).toUpperCase(); }
+function deviceKey() { try { return localStorage.getItem('ottoClockKey') || ''; } catch (e) { return ''; } }
+
+/* ---------- talking to the app: one POST, JSON in, JSON out ---------- */
+function api(body) {
+  body.deviceKey = deviceKey();
+  return fetch(APP_URL, { method: 'POST', body: JSON.stringify(body), redirect: 'follow' })
+    .then(function (r) { return r.text(); })
+    .then(function (txt) {
+      var j; try { j = JSON.parse(txt); } catch (e) { throw new Error('The app sent back something unexpected. Try again.'); }
+      if (!j.ok) throw new Error(j.error || 'Something went wrong.');
+      return j;
+    }, function () { throw new Error('Cannot reach the app. Check the Wi-Fi, then try again.'); });
+}
+function refresh() {
+  return api({ op: 'state' }).then(function (st) { S.state = st; S.netErr = ''; $('site').textContent = st.site; if (S.screen === 'home') render(); })
+    .catch(function (e) { S.netErr = e.message; if (S.screen === 'home') render(); });
+}
+
+/* ---------- screens ---------- */
+function render() {
+  var m = $('main');
+  if (S.screen === 'home') m.innerHTML = home();
+  else if (S.screen === 'shot') { m.innerHTML = shot(); attachCam(); }
+  else if (S.screen === 'pin') m.innerHTML = pinScreen();
+  else if (S.screen === 'result') m.innerHTML = result();
+  if (S.screen !== 'shot') stopCam();
+}
+function home() {
+  var st = S.state, h = '';
+  if (S.netErr) h += '<div class="card red"><b>' + esc(S.netErr) + '</b></div>';
+  if (!st) return h + '<div class="card">Loading…</div>';
+  var locked = st.deviceLocked && !st.paired;
+  h += '<h1>Clock in</h1>';
+  if (locked) h += '<div class="card amber"><b>This iPad is not paired yet.</b><div class="note">A manager taps “Pair this iPad” below and enters their PIN. Until then nobody can clock in here.</div></div>';
+  h += '<div class="big"><button class="btn" onclick="start(\'in\')"' + (locked ? ' disabled' : '') + '>Clock in</button>' +
+       '<button class="btn brown" onclick="start(\'out\')"' + (locked ? ' disabled' : '') + '>Clock out</button>' +
+       '<button class="btn ghost" onclick="start(\'breakStart\')"' + (locked ? ' disabled' : '') + '>Start break</button>' +
+       '<button class="btn ghost" onclick="start(\'breakEnd\')"' + (locked ? ' disabled' : '') + '>End break</button></div>';
+  h += '<div class="note">Clock in once you are in your whites. ' + (st.clockPhotos ? 'Clocking in and out takes a photo with the top half blurred: only your whites and apron are kept, never your face.' : '') + '</div>';
+  h += '<div><div class="label green">In now</div>' + (st.inNow.length ? '<div class="chips">' + st.inNow.map(function (p) {
+    return '<span class="chip' + (p.onBreak ? ' amber' : '') + '"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">since ' + hm(p.since) + (p.onBreak ? ' · on a break' : '') + '</span></span></span>';
+  }).join('') + '</div>' : '<div class="note">Nobody is clocked in.</div>') + '</div>';
+  if (st.dueIn.length) h += '<div><div class="label amber">Due in, not clocked in</div><div class="chips">' + st.dueIn.map(function (p) {
+    return '<span class="chip amber"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">rota’d from ' + esc(p.start) + '</span></span></span>';
+  }).join('') + '</div></div>';
+  h += '<footer><span>' + esc(st.site) + (st.paired && st.deviceLocked ? ' · paired clock-in point' : '') + '</span>' +
+       '<button type="button" onclick="start(\'pair\')">' + (st.paired && st.deviceLocked ? 'Re-pair this iPad' : 'Pair this iPad') + '</button></footer>';
+  return h;
+}
+function shot() {
+  var label = S.action === 'in' ? 'Clock in' : 'Clock out';
+  var live = !S.camErr;
+  var veil = Math.round((S.state && S.state.photoBlur != null ? S.state.photoBlur : 0.5) * 100);
+  return '<div class="shot">' +
+    '<div>' + (live
+      ? '<div class="viewfinder"><video id="video" autoplay playsinline muted></video><div class="veil" style="height:' + veil + '%"><span>Blurred before saving</span></div>' +
+        (S.cam ? '' : '<div class="wait" id="camWait">Starting the camera…</div>') + '</div>'
+      : '<div class="card amber"><b>The camera is not available on this device.</b><div class="note">When you press ' + label + ', the camera app opens: use the front camera and tap the shutter. The top of the photo is blurred before it is saved.</div></div>') +
+      '<div class="note" style="margin-top:10px">Stand in view, enter your PIN and press ' + label + '. The photo is taken at that moment. The top ' + veil + '% is blurred, so only your whites and apron are kept.</div></div>' +
+    pad(label) + '</div>';
+}
+function pinScreen() {
+  var t = { 'in': ['Clock in', 'Your PIN clocks you in.'], out: ['Clock out', 'Your PIN clocks you out.'], breakStart: ['Start break', 'Your PIN starts your break.'], breakEnd: ['End break', 'Your PIN ends your break.'], pair: ['Pair this iPad', 'A manager’s PIN makes this iPad the clock-in point. From then on clocking in only works here.'] }[S.action];
+  return '<h1>' + esc(t[0]) + '</h1><div class="note">' + esc(t[1]) + '</div><div class="shot"><div></div>' + pad(t[0]) + '</div>';
+}
+function pad(label) {
+  var dots = ''; for (var i = 0; i < Math.max(4, S.pin.length); i++) dots += '<i class="' + (i < S.pin.length ? 'on' : '') + '"></i>';
+  var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'].map(function (k) {
+    if (k === 'clear') return '<button type="button" class="fn" onclick="key(\'clear\')">Clear</button>';
+    if (k === 'back') return '<button type="button" class="fn" onclick="key(\'back\')" aria-label="Delete">⌫</button>';
+    return '<button type="button" onclick="key(\'' + k + '\')">' + k + '</button>';
+  }).join('');
+  return '<div class="pad"><div class="label" style="text-align:center">Your PIN</div><div class="dots" id="dots">' + dots + '</div>' +
+    '<div class="keys">' + keys + '</div><div class="err" id="err"></div>' +
+    '<button class="btn small" id="goBtn" onclick="submit()">' + esc(label) + '</button>' +
+    '<button class="btn ghost small" onclick="cancel()">Cancel</button></div>';
+}
+function result() {
+  return '<div class="result' + (S.resultBad ? ' bad' : '') + '"><div><div class="tick">' + (S.resultBad ? '!' : '✓') + '</div><div class="msg">' + esc(S.resultMsg) + '</div></div></div>';
+}
+
+/* ---------- flow ---------- */
+function start(action) {
+  S.action = action; S.pin = ''; S.busy = false;
+  if ((action === 'in' || action === 'out') && S.state && S.state.clockPhotos) { S.screen = 'shot'; S.camErr = null; startCam(); }
+  else S.screen = 'pin';
+  render(); idle();
+}
+function cancel() { S.screen = 'home'; S.pin = ''; clearTimeout(idleTimer); render(); refresh(); }
+function idle() { clearTimeout(idleTimer); idleTimer = setTimeout(function () { if (S.screen === 'shot' || S.screen === 'pin') cancel(); }, IDLE_MS); }
+function key(k) {
+  if (S.busy) return;
+  if (k === 'clear') S.pin = ''; else if (k === 'back') S.pin = S.pin.slice(0, -1); else if (S.pin.length < 8) S.pin += k;
+  var d = $('dots'); if (d) { var dots = ''; for (var i = 0; i < Math.max(4, S.pin.length); i++) dots += '<i class="' + (i < S.pin.length ? 'on' : '') + '"></i>'; d.innerHTML = dots; }
+  var e = $('err'); if (e) e.textContent = '';
+  idle();
+}
+document.addEventListener('keydown', function (ev) {
+  if (S.screen !== 'shot' && S.screen !== 'pin') return;
+  if (/^[0-9]$/.test(ev.key)) key(ev.key); else if (ev.key === 'Backspace') key('back'); else if (ev.key === 'Enter') submit(); else if (ev.key === 'Escape') cancel();
+});
+function submit() {
+  if (S.busy) return;
+  if (!S.pin) { $('err').textContent = 'Enter your PIN.'; return; }
+  if (S.action === 'pair') return send({ op: 'pair', pin: S.pin });
+  if (S.screen === 'shot') {
+    if (!S.camErr) return grab();
+    $('fileIn').value = ''; $('fileIn').click(); return;   // camera app fallback (allowed: this runs on the button press)
+  }
+  send({ op: 'clock', action: S.action, pin: S.pin, photo: '' });
+}
+function busy(on) { S.busy = on; var b = $('goBtn'); if (b) { b.disabled = on; if (on) b.textContent = 'Saving…'; } }
+function send(body) {
+  busy(true);
+  var isPair = body.op === 'pair';
+  api(body).then(function (r) {
+    if (isPair) { try { localStorage.setItem('ottoClockKey', r.deviceKey); } catch (e) {} showResult('This iPad is now the clock-in point.', false); return refresh(); }
+    S.state = r; showResult(r.message, false);
+  }).catch(function (e) {
+    busy(false); S.pin = ''; key('clear');
+    var el = $('err'); if (el) el.textContent = e.message; else showResult(e.message, true);
+    var g = $('goBtn'); if (g) g.textContent = S.action === 'pair' ? 'Pair this iPad' : { 'in': 'Clock in', out: 'Clock out', breakStart: 'Start break', breakEnd: 'End break' }[S.action];
+  });
+}
+function showResult(msg, bad) {
+  S.resultMsg = msg; S.resultBad = bad; S.screen = 'result'; S.pin = ''; clearTimeout(idleTimer); render();
+  clearTimeout(resultTimer); resultTimer = setTimeout(function () { S.screen = 'home'; render(); refresh(); }, RESULT_MS);
+}
+
+/* ---------- camera: front facing, live view, frame grabbed when the PIN is confirmed ---------- */
+function startCam() {
+  if (S.cam) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { S.camErr = 'unsupported'; render(); return; }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 1280 } }, audio: false })
+    .then(function (stream) { S.cam = stream; if (S.screen === 'shot') render(); else stopCam(); })
+    .catch(function (e) { S.camErr = (e && e.name) || 'blocked'; if (S.screen === 'shot') render(); });
+}
+function stopCam() {
+  if (S.cam) { try { S.cam.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} }
+  S.cam = null;
+}
+function attachCam() {
+  var v = $('video');
+  if (v && S.cam && v.srcObject !== S.cam) { v.srcObject = S.cam; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+}
+function grab() {
+  var v = $('video');
+  if (!v || !v.videoWidth) { $('err').textContent = 'The camera is still starting. Try again in a moment.'; return; }
+  busy(true);
+  // Save what the viewfinder shows: crop the frame to the viewfinder's shape, centred, then blur the top.
+  var vw = v.videoWidth, vh = v.videoHeight, want = v.clientHeight ? v.clientWidth / v.clientHeight : 3 / 4;
+  var sw = vw, sh = vh; if (vw / vh > want) sw = Math.round(vh * want); else sh = Math.round(vw / want);
+  var sx = Math.round((vw - sw) / 2), sy = Math.round((vh - sh) / 2);
+  var max = 1280, k = Math.min(1, max / Math.max(sw, sh));
+  var c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+  c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  blurTop(c, S.state.photoBlur).then(function (d) { send({ op: 'clock', action: S.action, pin: S.pin, photo: d.split(',')[1] }); });
+}
+$('fileIn').addEventListener('change', function () {
+  var f = this.files && this.files[0]; if (!f) return;
+  busy(true);
+  var url = URL.createObjectURL(f), img = new Image();
+  img.onload = function () {
+    var max = 1280, k = Math.min(1, max / Math.max(img.width, img.height));
+    var c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+    blurTop(c, S.state.photoBlur).then(function (d) { send({ op: 'clock', action: S.action, pin: S.pin, photo: d.split(',')[1] }); });
+  };
+  img.onerror = function () { URL.revokeObjectURL(url); busy(false); $('err').textContent = 'Could not read that photo. Try again.'; };
+  img.src = url;
+});
+/** Pixelates and smooths the top `frac` of the canvas, so the face is gone before the picture leaves the iPad. */
+function blurTop(c, frac) {
+  frac = frac == null ? 0.5 : Number(frac) || 0;
+  if (frac > 0) {
+    var x = c.getContext('2d'), h = Math.round(c.height * Math.min(frac, 1));
+    var tiny = document.createElement('canvas'); tiny.width = 12; tiny.height = Math.max(2, Math.round(12 * h / c.width));
+    tiny.getContext('2d').drawImage(c, 0, 0, c.width, h, 0, 0, tiny.width, tiny.height);
+    x.imageSmoothingEnabled = true;
+    x.drawImage(tiny, 0, 0, tiny.width, tiny.height, 0, 0, c.width, h);
+  }
+  return Promise.resolve(c.toDataURL('image/jpeg', 0.72));
+}
+
+/* ---------- clock, refresh, keep the screen awake ---------- */
+function tick() {
+  var d = new Date();
+  $('time').textContent = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  $('day').textContent = DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+}
+function wake() {
+  if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+  navigator.wakeLock.request('screen').catch(function () {});
+}
+document.addEventListener('visibilitychange', function () { if (!document.hidden) { wake(); refresh(); } });
+tick(); setInterval(tick, 1000);
+render(); refresh(); setInterval(function () { if (S.screen === 'home') refresh(); }, REFRESH_MS);
+wake();
+</script>
+</body>
+</html>

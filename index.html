@@ -83,10 +83,20 @@
   .keys button:active { background: var(--tile); }
   .actions { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 8px; }
   .err { color: var(--red); font-weight: 600; min-height: 20px; font-size: 14px; text-align: center; }
-  .result { flex: 1; display: grid; place-items: center; text-align: center; }
-  .result .msg { font: 40px/1.2 var(--serif); color: var(--ink); max-width: 18ch; }
-  .result .tick { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px; background: var(--green); color: #fff; font-size: 48px; }
-  .result.bad .tick { background: var(--red); }
+  /* after the PIN: the frozen photo (what was saved), the status, today's notices, then home */
+  .done { flex: 1; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px; justify-items: center; text-align: center; }
+  .still { position: relative; height: 26vh; min-height: 120px; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; background: #000; }
+  .still img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .still .tick { position: absolute; right: 8px; bottom: 8px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: #fff; font-size: 22px; font-weight: 700; }
+  .status { font: 30px/1.2 var(--serif); color: var(--ink); max-width: 22ch; }
+  .status.bad { color: var(--red); }
+  .status small { display: block; font: 15px/1.4 var(--sans); color: var(--muted); margin-top: 6px; }
+  .notices { width: 100%; max-width: 680px; min-height: 0; overflow: auto; display: grid; gap: 10px; align-content: start; }
+  .notice { background: var(--ink); color: var(--wordmark); border-radius: 14px; padding: 14px 18px; text-align: left; font-size: 19px; line-height: 1.4; }
+  .notice .label { color: var(--sand); margin-bottom: 4px; }
+  .done .btn { width: min(100%, 420px); }
+  @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  .pulse { animation: pulse 1.2s ease-in-out infinite; }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -106,10 +116,10 @@
 var APP_URL = 'https://script.google.com/macros/s/AKfycbxI70vt58yNEG9fnoV_ZDaBCa2Jq0_4edwIyv_A9-lAntrZYa4Q8SzgzUm3yExy9oAO/exec';
 try { APP_URL = localStorage.getItem('ottoAppUrl') || APP_URL; } catch (e) {}
 
-var S = { screen: 'home', state: null, pin: '', action: null, cam: null, camErr: null, busy: false, netErr: '' };
+var S = { screen: 'home', state: null, pin: '', action: null, cam: null, camErr: null, busy: false, netErr: '', still: '', resultMsg: '', resultBad: false, saving: false };
 var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-var IDLE_MS = 45000, RESULT_MS = 4500, REFRESH_MS = 60000;
+var IDLE_MS = 45000, RESULT_MS = 4500, RESULT_NOTICE_MS = 15000, REFRESH_MS = 60000;
 var idleTimer = null, resultTimer = null;
 
 function $(id) { return document.getElementById(id); }
@@ -142,8 +152,8 @@ function render() {
   if (S.screen === 'home') m.innerHTML = home();
   else if (S.screen === 'shot') { m.innerHTML = shot(); attachCam(); }
   else if (S.screen === 'pin') m.innerHTML = pinScreen();
-  else if (S.screen === 'result') m.innerHTML = result();
-  if (S.screen !== 'shot') stopCam();
+  else if (S.screen === 'saving' || S.screen === 'result') m.innerHTML = doneScreen();
+  if (S.screen !== 'shot' && S.screen !== 'saving') stopCam();   // keep the camera warm while saving, in case the PIN is wrong
 }
 function home() {
   var st = S.state, h = '';
@@ -156,7 +166,7 @@ function home() {
        '<button class="btn brown" onclick="start(\'out\')"' + (locked ? ' disabled' : '') + '>Clock out</button>' +
        '<button class="btn ghost" onclick="start(\'breakStart\')"' + (locked ? ' disabled' : '') + '>Start break</button>' +
        '<button class="btn ghost" onclick="start(\'breakEnd\')"' + (locked ? ' disabled' : '') + '>End break</button></div>';
-  h += '<div class="note">Clock in once you are in your whites. ' + (st.clockPhotos ? 'Clocking in and out takes a photo with the top half blurred: only your whites and apron are kept, never your face.' : '') + '</div>';
+  h += '<div class="note">Clock in once you are in your whites. ' + (st.clockPhotos ? 'Clocking in and out takes a photo the moment your PIN goes in, with the top half blurred: only your whites and apron are kept, never your face.' : '') + '</div>';
   h += '<div><div class="label green">In now</div>' + (st.inNow.length ? '<div class="chips">' + st.inNow.map(function (p) {
     return '<span class="chip' + (p.onBreak ? ' amber' : '') + '"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">since ' + hm(p.since) + (p.onBreak ? ' · on a break' : '') + '</span></span></span>';
   }).join('') + '</div>' : '<div class="note">Nobody is clocked in.</div>') + '</div>';
@@ -194,9 +204,25 @@ function pad(label, hint) {
     '<button class="btn small" id="goBtn" onclick="submit()">' + esc(label) + '</button>' +
     '<button class="btn ghost small" type="button" onclick="cancel()">Cancel</button></div></div>';
 }
-function result() {
-  return '<div class="result' + (S.resultBad ? ' bad' : '') + '"><div><div class="tick">' + (S.resultBad ? '!' : '✓') + '</div><div class="msg">' + esc(S.resultMsg) + '</div></div></div>';
+/**
+ * Shown the moment the PIN is confirmed: the photo is already taken and frozen on screen (so nobody thinks it is
+ * still to come), the save runs in the background, and on a clock-in today's management notices fill the wait and
+ * stay up afterwards. One tap on OK, or a timeout, goes back home.
+ */
+function doneScreen() {
+  var saving = S.screen === 'saving';
+  var notices = S.action === 'in' && S.state && S.state.notices ? S.state.notices : [];
+  var h = '<div class="done">';
+  h += S.still ? '<div class="still"><img src="' + S.still + '" alt="The photo as saved: top part blurred"><div class="tick">✓</div></div>' : '<div></div>';
+  h += saving ? '<div class="status">Photo taken<small class="pulse">Saving…</small></div>'
+              : '<div class="status' + (S.resultBad ? ' bad' : '') + '">' + esc(S.resultMsg) + '</div>';
+  h += '<div class="notices">' + notices.map(function (n) {
+    return '<div class="notice"><div class="label">From management' + (n.by ? ' · ' + esc(n.by) : '') + (n.at ? ' · ' + esc(n.at) : '') + '</div>' + esc(n.text) + '</div>';
+  }).join('') + '</div>';
+  h += saving ? '<div></div>' : '<button class="btn small" onclick="finish()">OK</button>';
+  return h + '</div>';
 }
+function finish() { clearTimeout(resultTimer); S.screen = 'home'; S.still = ''; render(); refresh(); }
 
 /* ---------- flow ---------- */
 function start(action) {
@@ -236,14 +262,22 @@ function send(body) {
     if (isPair) { try { localStorage.setItem('ottoClockKey', r.deviceKey); } catch (e) {} showResult('This tablet is now the clock-in point.', false); return refresh(); }
     S.state = r; showResult(r.message, false);
   }).catch(function (e) {
-    busy(false); S.pin = ''; key('clear');
+    busy(false); S.pin = '';
+    if (S.screen === 'saving') { S.screen = S.still ? 'shot' : 'pin'; S.still = ''; render(); idle(); }
+    key('clear');
     var el = $('err'); if (el) el.textContent = e.message; else showResult(e.message, true);
     var g = $('goBtn'); if (g) g.textContent = S.action === 'pair' ? 'Pair this tablet' : { 'in': 'Clock in', out: 'Clock out', breakStart: 'Start break', breakEnd: 'End break' }[S.action];
   });
 }
 function showResult(msg, bad) {
   S.resultMsg = msg; S.resultBad = bad; S.screen = 'result'; S.pin = ''; clearTimeout(idleTimer); render();
-  clearTimeout(resultTimer); resultTimer = setTimeout(function () { S.screen = 'home'; render(); refresh(); }, RESULT_MS);
+  var hasNotices = !bad && S.action === 'in' && S.state && S.state.notices && S.state.notices.length;
+  clearTimeout(resultTimer); resultTimer = setTimeout(finish, hasNotices ? RESULT_NOTICE_MS : RESULT_MS);
+}
+/** The photo is taken: freeze it on screen and start saving. */
+function photoTaken(dataUrl) {
+  S.still = dataUrl; S.screen = 'saving'; clearTimeout(idleTimer); render();
+  send({ op: 'clock', action: S.action, pin: S.pin, photo: dataUrl.split(',')[1] });
 }
 
 /* ---------- camera: front facing, live view, frame grabbed when the PIN is confirmed ---------- */
@@ -273,7 +307,7 @@ function grab() {
   var max = 1280, k = Math.min(1, max / Math.max(sw, sh));
   var c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
   c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
-  blurTop(c, S.state.photoBlur).then(function (d) { send({ op: 'clock', action: S.action, pin: S.pin, photo: d.split(',')[1] }); });
+  blurTop(c, S.state.photoBlur).then(photoTaken);
 }
 $('fileIn').addEventListener('change', function () {
   var f = this.files && this.files[0]; if (!f) return;
@@ -283,7 +317,7 @@ $('fileIn').addEventListener('change', function () {
     var max = 1280, k = Math.min(1, max / Math.max(img.width, img.height));
     var c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-    blurTop(c, S.state.photoBlur).then(function (d) { send({ op: 'clock', action: S.action, pin: S.pin, photo: d.split(',')[1] }); });
+    blurTop(c, S.state.photoBlur).then(photoTaken);
   };
   img.onerror = function () { URL.revokeObjectURL(url); busy(false); $('err').textContent = 'Could not read that photo. Try again.'; };
   img.src = url;

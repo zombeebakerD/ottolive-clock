@@ -71,8 +71,9 @@
     .pad { align-self: center; }
   }
   .viewfinder video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
-  .viewfinder .veil { position: absolute; left: 0; top: 0; right: 0; height: 50%; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); background: rgba(251,249,246,.28); border-bottom: 2px dashed rgba(255,255,255,.8); }
-  .viewfinder .veil span { position: absolute; left: 14px; bottom: 8px; font: 600 13px var(--sans); color: #fff; text-shadow: 0 1px 3px #000; letter-spacing: .5px; }
+  .viewfinder .veil { position: absolute; left: 0; top: 0; right: 0; height: 60%; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); background: rgba(251,249,246,.28);
+    -webkit-mask-image: linear-gradient(#000 0, #000 40%, transparent 100%); mask-image: linear-gradient(#000 0, #000 40%, transparent 100%); }
+  .viewfinder .veil span { position: absolute; left: 14px; top: 10px; font: 600 13px var(--sans); color: #fff; text-shadow: 0 1px 3px #000; letter-spacing: .5px; }
   .viewfinder .wait { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 15px; text-align: center; padding: 20px; }
   .hint { color: var(--muted); font-size: 14px; text-align: center; line-height: 1.35; }
   .dots { display: flex; gap: 12px; justify-content: center; min-height: 18px; }
@@ -166,7 +167,7 @@ function home() {
        '<button class="btn brown" onclick="start(\'out\')"' + (locked ? ' disabled' : '') + '>Clock out</button>' +
        '<button class="btn ghost" onclick="start(\'breakStart\')"' + (locked ? ' disabled' : '') + '>Start break</button>' +
        '<button class="btn ghost" onclick="start(\'breakEnd\')"' + (locked ? ' disabled' : '') + '>End break</button></div>';
-  h += '<div class="note">Clock in once you are in your whites. ' + (st.clockPhotos ? 'Clocking in and out takes a photo the moment your PIN goes in, with the top half blurred: only your whites and apron are kept, never your face.' : '') + '</div>';
+  h += '<div class="note">Clock in once you are in your whites. ' + (st.clockPhotos ? 'Clocking in and out takes a photo the moment your PIN goes in, blurred from the top down: only the colours of your whites and apron are kept, never your face.' : '') + '</div>';
   h += '<div><div class="label green">In now</div>' + (st.inNow.length ? '<div class="chips">' + st.inNow.map(function (p) {
     return '<span class="chip' + (p.onBreak ? ' amber' : '') + '"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">since ' + hm(p.since) + (p.onBreak ? ' · on a break' : '') + '</span></span></span>';
   }).join('') + '</div>' : '<div class="note">Nobody is clocked in.</div>') + '</div>';
@@ -180,13 +181,13 @@ function home() {
 function shot() {
   var label = S.action === 'in' ? 'Clock in' : 'Clock out';
   var live = !S.camErr;
-  var veil = Math.round((S.state && S.state.photoBlur != null ? S.state.photoBlur : 0.5) * 100);
+  var veil = Math.round((S.state && S.state.photoBlur != null && S.state.photoBlur !== '' ? S.state.photoBlur : 0.6) * 100);
   return '<div class="shot">' +
     '<div class="vwrap">' + (live
       ? '<div class="viewfinder"><video id="video" autoplay playsinline muted></video><div class="veil" style="height:' + veil + '%"><span>Blurred before saving</span></div>' +
         (S.cam ? '' : '<div class="wait" id="camWait">Starting the camera…</div>') + '</div>'
-      : '<div class="card amber"><b>The camera is not available on this device.</b><div class="note">When you press ' + label + ', the camera app opens: use the front camera and tap the shutter. The top of the photo is blurred before it is saved.</div></div>') + '</div>' +
-    pad(label, 'Stand in view, enter your PIN and press ' + label + '. The photo is taken then, top ' + veil + '% blurred.') + '</div>';
+      : '<div class="card amber"><b>The camera is not available on this device.</b><div class="note">When you press ' + label + ', the camera app opens: use the front camera and tap the shutter. The photo is blurred from the top down before it is saved, so your face is never kept.</div></div>') + '</div>' +
+    pad(label, 'Stand in view, enter your PIN and press ' + label + '. The photo is taken then, blurred from the top down: only the colours of your whites and apron are kept.') + '</div>';
 }
 function pinScreen() {
   var t = { 'in': ['Clock in', 'Your PIN clocks you in.'], out: ['Clock out', 'Your PIN clocks you out.'], breakStart: ['Start break', 'Your PIN starts your break.'], breakEnd: ['End break', 'Your PIN ends your break.'], pair: ['Pair this tablet', 'A manager’s PIN makes this tablet the clock-in point. From then on clocking in only works here.'] }[S.action];
@@ -213,7 +214,7 @@ function doneScreen() {
   var saving = S.screen === 'saving';
   var notices = S.action === 'in' && S.state && S.state.notices ? S.state.notices : [];
   var h = '<div class="done">';
-  h += S.still ? '<div class="still"><img src="' + S.still + '" alt="The photo as saved: top part blurred"><div class="tick">✓</div></div>' : '<div></div>';
+  h += S.still ? '<div class="still"><img src="' + S.still + '" alt="The photo as saved: blurred from the top down"><div class="tick">✓</div></div>' : '<div></div>';
   h += saving ? '<div class="status">Photo taken<small class="pulse">Saving…</small></div>'
               : '<div class="status' + (S.resultBad ? ' bad' : '') + '">' + esc(S.resultMsg) + '</div>';
   h += '<div class="notices">' + notices.map(function (n) {
@@ -300,39 +301,82 @@ function grab() {
   var v = $('video');
   if (!v || !v.videoWidth) { $('err').textContent = 'The camera is still starting. Try again in a moment.'; return; }
   busy(true);
-  // Save what the viewfinder shows: crop the frame to the viewfinder's shape, centred, then blur the top.
+  // Save what the viewfinder shows: crop the frame to the viewfinder's shape, centred, then frost it from the top down.
+  // 960 px on the long side is plenty for a frosted photo and keeps the blur quick on a cheap tablet.
   var vw = v.videoWidth, vh = v.videoHeight, want = v.clientHeight ? v.clientWidth / v.clientHeight : 3 / 4;
   var sw = vw, sh = vh; if (vw / vh > want) sw = Math.round(vh * want); else sh = Math.round(vw / want);
   var sx = Math.round((vw - sw) / 2), sy = Math.round((vh - sh) / 2);
-  var max = 1280, k = Math.min(1, max / Math.max(sw, sh));
+  var max = 960, k = Math.min(1, max / Math.max(sw, sh));
   var c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
   c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
-  blurTop(c, S.state.photoBlur).then(photoTaken);
+  blurTop(c).then(photoTaken);
 }
 $('fileIn').addEventListener('change', function () {
   var f = this.files && this.files[0]; if (!f) return;
   busy(true);
   var url = URL.createObjectURL(f), img = new Image();
   img.onload = function () {
-    var max = 1280, k = Math.min(1, max / Math.max(img.width, img.height));
+    var max = 960, k = Math.min(1, max / Math.max(img.width, img.height));
     var c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-    blurTop(c, S.state.photoBlur).then(photoTaken);
+    blurTop(c).then(photoTaken);
   };
   img.onerror = function () { URL.revokeObjectURL(url); busy(false); $('err').textContent = 'Could not read that photo. Try again.'; };
   img.src = url;
 });
-/** Pixelates and smooths the top `frac` of the canvas, so the face is gone before the picture leaves the tablet. */
-function blurTop(c, frac) {
-  frac = frac == null ? 0.5 : Number(frac) || 0;
-  if (frac > 0) {
-    var x = c.getContext('2d'), h = Math.round(c.height * Math.min(frac, 1));
-    var tiny = document.createElement('canvas'); tiny.width = 12; tiny.height = Math.max(2, Math.round(12 * h / c.width));
-    tiny.getContext('2d').drawImage(c, 0, 0, c.width, h, 0, 0, tiny.width, tiny.height);
-    x.imageSmoothingEnabled = true;
-    x.drawImage(tiny, 0, 0, tiny.width, tiny.height, 0, 0, c.width, h);
-  }
+/** Frosts the photo (settings clockPhotoBlur = where the fade ends, clockPhotoBlurMin = softness kept at the bottom)
+ *  before it leaves the tablet, and returns it as a JPEG data URL. */
+function blurTop(c) {
+  var st = S.state || {};
+  fadeBlur(c, st.photoBlur, st.photoBlurMin);
   return Promise.resolve(c.toDataURL('image/jpeg', 0.72));
+}
+/* ---- fadeBlur: the same function lives in apps-script/Index.html; change both together ---- */
+/**
+ * Frosts a photo from the top down so nobody can be identified, while the colours of whites and apron still
+ * show. The top is fully blurred (a face is one blob). From 40% of the way to `end` the blur eases off, and by
+ * `end` (0.6 = 60% down the photo) only the light `min` softness (0.1) is left, which stays to the bottom.
+ * Strength 1 = 12 blocks across the photo; strength s = 12/s blocks; min 0 = sharp at the bottom.
+ */
+function fadeBlur(c, end, min) {
+  end = end == null || end === '' ? 0.6 : Math.max(0, Math.min(1, Number(end) || 0));
+  min = min == null || min === '' ? 0.1 : Math.max(0, Math.min(1, Number(min) || 0));
+  if (end <= 0 && min <= 0) return c;
+  var W = c.width, H = c.height, out = c.getContext('2d');
+  var src = document.createElement('canvas'); src.width = W; src.height = H; src.getContext('2d').drawImage(c, 0, 0);
+  var plateau = end * 0.4, lo = Math.max(min, 0.05), K = 7, s = [];
+  for (var i = 0; i < K; i++) s.push(Math.exp(Math.log(lo) * i / (K - 1)));   // strengths 1 → lo, geometric
+  if (min < lo) s.push(min);                                                     // sharp (or nearly) base
+  function level(str) {   // a full-size copy blurred to strength `str`: shrink in halves, then stretch back smoothly
+    if (str < 0.05) return src;
+    var cols = Math.min(W, Math.round(12 / str)), rws = Math.max(2, Math.round(cols * H / W)), cur = src, cw = W, ch = H;
+    while (cw >= cols * 3) {
+      var n = document.createElement('canvas'); n.width = Math.max(cols, Math.round(cw / 2)); n.height = Math.max(rws, Math.round(ch / 2));
+      var nx = n.getContext('2d'); nx.imageSmoothingEnabled = true; nx.drawImage(cur, 0, 0, cw, ch, 0, 0, n.width, n.height);
+      cur = n; cw = n.width; ch = n.height;
+    }
+    var t = document.createElement('canvas'); t.width = cols; t.height = rws;
+    var tx = t.getContext('2d'); tx.imageSmoothingEnabled = true; tx.drawImage(cur, 0, 0, cw, ch, 0, 0, cols, rws);
+    var L = document.createElement('canvas'); L.width = W; L.height = H;
+    var lx = L.getContext('2d'); lx.imageSmoothingEnabled = true; lx.imageSmoothingQuality = 'high'; lx.drawImage(t, 0, 0, cols, rws, 0, 0, W, H);
+    return L;
+  }
+  // The row (from the top) where the blur is exactly strength `str`: the plateau for 1, `end` for min.
+  function row(str) { var u = min >= 1 ? 0 : 1 - (str - min) / (1 - min); return Math.round(H * (plateau + (end - plateau) * Math.max(0, Math.min(1, u)))); }
+  out.drawImage(level(s[s.length - 1]), 0, 0);              // the lightest level everywhere
+  for (var k = s.length - 2; k >= 0; k--) {                 // then each heavier band on top, fading into the next
+    var L = level(s[k]), y0 = row(s[k]), y1 = row(s[k + 1]);
+    if (y0 > 0) out.drawImage(L, 0, 0, W, y0, 0, 0, W, y0);
+    if (y1 - y0 >= 1) {
+      var fh = y1 - y0, f = document.createElement('canvas'); f.width = W; f.height = fh; var fx = f.getContext('2d');
+      fx.drawImage(L, 0, y0, W, fh, 0, 0, W, fh);
+      fx.globalCompositeOperation = 'destination-in';
+      var g = fx.createLinearGradient(0, 0, 0, fh); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      fx.fillStyle = g; fx.fillRect(0, 0, W, fh);
+      out.drawImage(f, 0, y0);
+    }
+  }
+  return c;
 }
 
 /* ---------- clock, refresh, keep the screen awake ---------- */

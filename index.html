@@ -26,15 +26,16 @@
     --sans: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 var(--sans); display: flex; flex-direction: column; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
-  header { background: var(--ink); color: var(--wordmark); padding: calc(14px + env(safe-area-inset-top)) 24px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .wordmark { width: 150px; height: auto; display: block; }
-  .site { font: 600 11px/1.4 var(--sans); letter-spacing: 3px; text-transform: uppercase; color: var(--sand); margin-top: 4px; }
-  .clock { text-align: right; }
-  .clock .time { font: 44px/1 var(--serif); }
+  html { height: 100%; }
+  body { margin: 0; height: 100vh; height: 100dvh; background: var(--bg); color: var(--text); font: 17px/1.5 var(--sans); display: flex; flex-direction: column; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+  header { background: var(--ink); color: var(--wordmark); padding: calc(10px + env(safe-area-inset-top)) 16px 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: none; }
+  header > div:first-child { min-width: 0; }
+  .wordmark { width: 132px; height: auto; display: block; }
+  .site { font: 600 11px/1.4 var(--sans); letter-spacing: 3px; text-transform: uppercase; color: var(--sand); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clock { text-align: right; flex: none; }
+  .clock .time { font: 36px/1 var(--serif); }
   .clock .day { font: 600 12px/1.4 var(--sans); letter-spacing: 2px; text-transform: uppercase; color: var(--sand); }
-  main { flex: 1; padding: 20px 24px calc(20px + env(safe-area-inset-bottom)); max-width: 1100px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; min-height: 0; }
+  main { flex: 1; min-height: 0; overflow: auto; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); max-width: 1100px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
   h1 { margin: 0; font: 34px/1.2 var(--serif); color: var(--ink); }
   h2 { margin: 0; font: 26px/1.25 var(--serif); color: var(--ink); }
   .note { color: var(--muted); font-size: 15px; }
@@ -58,23 +59,30 @@
   footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
   footer button { background: none; border: 0; color: var(--muted); font: 600 13px var(--sans); text-decoration: underline; cursor: pointer; padding: 8px 0; }
 
-  /* shot screen: viewfinder + PIN pad side by side when there is room, stacked on a portrait tablet */
-  .shot { display: grid; gap: 20px; grid-template-columns: 1fr; align-items: start; }
-  @media (min-width: 900px) and (min-aspect-ratio: 1/1) { .shot { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); } }
-  .viewfinder { position: relative; width: min(100%, calc(min(62vh, 640px) * 3 / 4)); aspect-ratio: 3 / 4; background: #000; border-radius: 16px; overflow: hidden; margin: 0 auto; }
+  /* shot screen: everything fits one screen with no scrolling. Portrait: viewfinder takes what is left above
+     the pad. Landscape: viewfinder left, pad right. */
+  .shot { flex: 1; min-height: 0; display: grid; gap: 12px; grid-template-rows: minmax(0, 1fr) auto; }
+  .vwrap { min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .vwrap.top { justify-content: flex-start; align-items: stretch; gap: 8px; }
+  .viewfinder { position: relative; height: 100%; max-height: calc((100vw - 32px) * 4 / 3); aspect-ratio: 3 / 4; max-width: 100%; background: #000; border-radius: 16px; overflow: hidden; }
+  .pad { display: grid; gap: 8px; align-self: end; }
+  @media (min-aspect-ratio: 1/1) and (min-width: 700px) {
+    .shot { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) minmax(300px, 46%); gap: 20px; }
+    .pad { align-self: center; }
+  }
   .viewfinder video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
   .viewfinder .veil { position: absolute; left: 0; top: 0; right: 0; height: 50%; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); background: rgba(251,249,246,.28); border-bottom: 2px dashed rgba(255,255,255,.8); }
   .viewfinder .veil span { position: absolute; left: 14px; bottom: 8px; font: 600 13px var(--sans); color: #fff; text-shadow: 0 1px 3px #000; letter-spacing: .5px; }
   .viewfinder .wait { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 15px; text-align: center; padding: 20px; }
-  .pad { display: flex; flex-direction: column; gap: 14px; }
-  .dots { display: flex; gap: 14px; justify-content: center; min-height: 26px; }
-  .dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); display: block; }
+  .hint { color: var(--muted); font-size: 14px; text-align: center; line-height: 1.35; }
+  .dots { display: flex; gap: 12px; justify-content: center; min-height: 18px; }
+  .dots i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink); display: block; }
   .dots i.on { background: var(--ink); }
-  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .keys button { border: 1px solid var(--rule); background: var(--card); border-radius: 12px; font: 600 28px/1 var(--sans); color: var(--ink); min-height: 68px; cursor: pointer; }
-  .keys button.fn { font-size: 16px; color: var(--muted); }
+  .keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .keys button { border: 1px solid var(--rule); background: var(--card); border-radius: 12px; font: 600 28px/1 var(--sans); color: var(--ink); min-height: 60px; cursor: pointer; }
   .keys button:active { background: var(--tile); }
-  .err { color: var(--red); font-weight: 600; min-height: 24px; }
+  .actions { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 8px; }
+  .err { color: var(--red); font-weight: 600; min-height: 20px; font-size: 14px; text-align: center; }
   .result { flex: 1; display: grid; place-items: center; text-align: center; }
   .result .msg { font: 40px/1.2 var(--serif); color: var(--ink); max-width: 18ch; }
   .result .tick { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px; background: var(--green); color: #fff; font-size: 48px; }
@@ -164,28 +172,27 @@ function shot() {
   var live = !S.camErr;
   var veil = Math.round((S.state && S.state.photoBlur != null ? S.state.photoBlur : 0.5) * 100);
   return '<div class="shot">' +
-    '<div>' + (live
+    '<div class="vwrap">' + (live
       ? '<div class="viewfinder"><video id="video" autoplay playsinline muted></video><div class="veil" style="height:' + veil + '%"><span>Blurred before saving</span></div>' +
         (S.cam ? '' : '<div class="wait" id="camWait">Starting the camera…</div>') + '</div>'
-      : '<div class="card amber"><b>The camera is not available on this device.</b><div class="note">When you press ' + label + ', the camera app opens: use the front camera and tap the shutter. The top of the photo is blurred before it is saved.</div></div>') +
-      '<div class="note" style="margin-top:10px">Stand in view, enter your PIN and press ' + label + '. The photo is taken at that moment. The top ' + veil + '% is blurred, so only your whites and apron are kept.</div></div>' +
-    pad(label) + '</div>';
+      : '<div class="card amber"><b>The camera is not available on this device.</b><div class="note">When you press ' + label + ', the camera app opens: use the front camera and tap the shutter. The top of the photo is blurred before it is saved.</div></div>') + '</div>' +
+    pad(label, 'Stand in view, enter your PIN and press ' + label + '. The photo is taken then, top ' + veil + '% blurred.') + '</div>';
 }
 function pinScreen() {
   var t = { 'in': ['Clock in', 'Your PIN clocks you in.'], out: ['Clock out', 'Your PIN clocks you out.'], breakStart: ['Start break', 'Your PIN starts your break.'], breakEnd: ['End break', 'Your PIN ends your break.'], pair: ['Pair this tablet', 'A manager’s PIN makes this tablet the clock-in point. From then on clocking in only works here.'] }[S.action];
-  return '<h1>' + esc(t[0]) + '</h1><div class="note">' + esc(t[1]) + '</div><div class="shot"><div></div>' + pad(t[0]) + '</div>';
+  return '<div class="shot"><div class="vwrap top"><h1>' + esc(t[0]) + '</h1><div class="note">' + esc(t[1]) + '</div></div>' + pad(t[0], '') + '</div>';
 }
-function pad(label) {
+/** PIN pad: two rows of five (1 to 5, 6 to 0) so it fits under the viewfinder without scrolling. */
+function pad(label, hint) {
   var dots = ''; for (var i = 0; i < Math.max(4, S.pin.length); i++) dots += '<i class="' + (i < S.pin.length ? 'on' : '') + '"></i>';
-  var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'].map(function (k) {
-    if (k === 'clear') return '<button type="button" class="fn" onclick="key(\'clear\')">Clear</button>';
-    if (k === 'back') return '<button type="button" class="fn" onclick="key(\'back\')" aria-label="Delete">⌫</button>';
+  var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map(function (k) {
     return '<button type="button" onclick="key(\'' + k + '\')">' + k + '</button>';
   }).join('');
-  return '<div class="pad"><div class="label" style="text-align:center">Your PIN</div><div class="dots" id="dots">' + dots + '</div>' +
+  return '<div class="pad">' + (hint ? '<div class="hint">' + esc(hint) + '</div>' : '') + '<div class="dots" id="dots">' + dots + '</div>' +
     '<div class="keys">' + keys + '</div><div class="err" id="err"></div>' +
+    '<div class="actions"><button class="btn ghost small" type="button" onclick="key(\'clear\')">Clear</button>' +
     '<button class="btn small" id="goBtn" onclick="submit()">' + esc(label) + '</button>' +
-    '<button class="btn ghost small" onclick="cancel()">Cancel</button></div>';
+    '<button class="btn ghost small" type="button" onclick="cancel()">Cancel</button></div></div>';
 }
 function result() {
   return '<div class="result' + (S.resultBad ? ' bad' : '') + '"><div><div class="tick">' + (S.resultBad ? '!' : '✓') + '</div><div class="msg">' + esc(S.resultMsg) + '</div></div></div>';

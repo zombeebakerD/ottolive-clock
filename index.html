@@ -128,6 +128,8 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 function hm(iso) { var d = new Date(iso); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
 function first(name) { return String(name || '').split(' ')[0]; }
+// 'Toby R': names are shown as first name + surname initial, same as in the app (Dom, 30 Oct 2026).
+function shortName(n) { var p = String(n == null ? '' : n).trim().split(/\s+/); return p.length > 1 ? p[0] + ' ' + p[p.length - 1].charAt(0).toUpperCase() : p[0]; }
 function initials(name) { return String(name || '').split(' ').map(function (p) { return p[0] || ''; }).join('').slice(0, 2).toUpperCase(); }
 function deviceKey() { try { return localStorage.getItem('ottoClockKey') || ''; } catch (e) { return ''; } }
 
@@ -169,10 +171,10 @@ function home() {
        '<button class="btn ghost" onclick="start(\'breakEnd\')"' + (locked ? ' disabled' : '') + '>End break</button></div>';
   h += '<div class="note">Clock in once you are in your whites. ' + (st.clockPhotos ? 'Clocking in and out takes a photo the moment your PIN goes in, blurred from the top down: only the colours of your whites and apron are kept, never your face.' : '') + '</div>';
   h += '<div><div class="label green">In now</div>' + (st.inNow.length ? '<div class="chips">' + st.inNow.map(function (p) {
-    return '<span class="chip' + (p.onBreak ? ' amber' : '') + '"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">since ' + hm(p.since) + (p.onBreak ? ' · on a break' : '') + '</span></span></span>';
+    return '<span class="chip' + (p.onBreak ? ' amber' : '') + '"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(shortName(p.staff)) + '<br><span class="since">since ' + hm(p.since) + (p.onBreak ? ' · on a break' : '') + '</span></span></span>';
   }).join('') + '</div>' : '<div class="note">Nobody is clocked in.</div>') + '</div>';
   if (st.dueIn.length) h += '<div><div class="label amber">Due in, not clocked in</div><div class="chips">' + st.dueIn.map(function (p) {
-    return '<span class="chip amber"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(first(p.staff)) + '<br><span class="since">rota’d from ' + esc(p.start) + '</span></span></span>';
+    return '<span class="chip amber"><span class="tag">' + esc(initials(p.staff)) + '</span><span>' + esc(shortName(p.staff)) + '<br><span class="since">rota’d from ' + esc(p.start) + '</span></span></span>';
   }).join('') + '</div></div>';
   h += '<footer><span>' + esc(st.site) + (st.paired && st.deviceLocked ? ' · paired clock-in point' : '') + '</span>' +
        '<button type="button" onclick="start(\'pair\')">' + (st.paired && st.deviceLocked ? 'Re-pair this tablet' : 'Pair this tablet') + '</button></footer>';
@@ -181,7 +183,7 @@ function home() {
 function shot() {
   var label = S.action === 'in' ? 'Clock in' : 'Clock out';
   var live = !S.camErr;
-  var veil = Math.round((S.state && S.state.photoBlur != null && S.state.photoBlur !== '' ? S.state.photoBlur : 0.6) * 100);
+  var veil = Math.round((S.state && S.state.photoBlur != null && S.state.photoBlur !== '' ? S.state.photoBlur : 0.8) * 100);
   return '<div class="shot">' +
     '<div class="vwrap">' + (live
       ? '<div class="viewfinder"><video id="video" autoplay playsinline muted></video><div class="veil" style="height:' + veil + '%"><span>Blurred before saving</span></div>' +
@@ -335,11 +337,11 @@ function blurTop(c) {
 /**
  * Frosts a photo from the top down so nobody can be identified, while the colours of whites and apron still
  * show. The top is fully blurred (a face is one blob). From 40% of the way to `end` the blur eases off, and by
- * `end` (0.6 = 60% down the photo) only the light `min` softness (0.1) is left, which stays to the bottom.
+ * `end` (0.8 = 80% down the photo) only the light `min` softness (0.1) is left, which stays to the bottom.
  * Strength 1 = 12 blocks across the photo; strength s = 12/s blocks; min 0 = sharp at the bottom.
  */
 function fadeBlur(c, end, min) {
-  end = end == null || end === '' ? 0.6 : Math.max(0, Math.min(1, Number(end) || 0));
+  end = end == null || end === '' ? 0.8 : Math.max(0, Math.min(1, Number(end) || 0));
   min = min == null || min === '' ? 0.1 : Math.max(0, Math.min(1, Number(min) || 0));
   if (end <= 0 && min <= 0) return c;
   var W = c.width, H = c.height, out = c.getContext('2d');

@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#393a34">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fbf9f6">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Ottolive clock-in</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ovo&family=Open+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ovo&family=Montserrat:wght@400;500;600;700&display=swap">
 <style>
   /*
    * Clock-in terminal for the production-room tablet. Lives outside Apps Script so that the page may use the front
@@ -99,7 +99,19 @@
   @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
   .pulse { animation: pulse 1.2s ease-in-out infinite; }
   .hidden { display: none !important; }
-</style>
+  /* ===== Ottolive house look: paper, hairlines, square corners, Montserrat ===== */
+  :root { --text:#2b2c27; --muted:#5e5d55; --brown:#393a34; --sand:rgba(57,58,52,.28); --tile:#efece6; --rule:rgba(57,58,52,.18);
+          --wordmark:#393a34; --green:#4d6b4a; --amber:#a87a2a; --red:#a33a1e;
+          --sans:Montserrat,'Helvetica Neue',Helvetica,Arial,sans-serif; }
+  header { background:var(--bg); color:var(--ink); border-bottom:1px solid var(--rule); }
+  .site, .clock .day { color:var(--muted); letter-spacing:.24em; }
+  .btn, .btn.small, .card, .chip, .keys button, .notice, .viewfinder, .still, .tag, .still .tick { border-radius:0 !important; }
+  .btn { font-weight:600; }
+  .btn.brown { background:#fff; color:var(--ink); border:1px solid var(--ink); }
+  .btn.ghost { border:1px solid var(--rule); }
+  .dots i { border-radius:0; border-width:1px; }
+  .notice { background:#fff; color:var(--ink); border:1px solid var(--ink); }
+  .notice .label { color:var(--muted); }</style>
 </head>
 <body>
 <header>

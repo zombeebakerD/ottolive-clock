@@ -1,0 +1,22 @@
+{
+  "name": "Ottolive trade orders",
+  "short_name": "Ottolive",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#22231f",
+  "theme_color": "#22231f",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

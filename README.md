@@ -16,3 +16,5 @@ Setup on the iPad and how pairing works: see the Ottolive Production README, sec
 - `trade/`: the trade order page.
 
 These are thin frames around the Google Apps Script apps. No data or code of the apps lives here.
+
+`foods/startup/` and `bakehouse/startup/` hold plain logo-colour start-up pictures, one per iPhone/iPad screen size, so the apps never open on a white screen. To cover a new Apple screen size, add a picture of that exact pixel size and a matching `apple-touch-startup-image` line in both pages.

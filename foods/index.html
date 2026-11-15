@@ -19,7 +19,8 @@
      wait all look like one piece. The app fades in over it as soon as Google has loaded it. */
   html, body { margin: 0; height: 100%; background: #393a34; overflow: hidden; }
   #splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #393a34; }
-  #splash img { width: 160px; height: 160px; display: block; }
+  /* 240 x 240 is the size Android draws the app icon on its own opening screen, so the logo does not jump when the page takes over. */
+  #splash img { width: 240px; height: 240px; display: block; }
   /* Starts below the phone's status bar (clock, battery), so the top of the app is never hidden under it. */
   iframe { position: fixed; top: env(safe-area-inset-top, 0px); right: 0; bottom: 0; left: 0; border: 0; display: block;
            width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px));

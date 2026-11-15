@@ -20,10 +20,12 @@
   html, body { margin: 0; height: 100%; background: #c9b6a3; overflow: hidden; }
   #splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #c9b6a3; }
   #splash img { width: 160px; height: 160px; display: block; }
-  iframe { position: fixed; inset: 0; border: 0; display: block; width: 100%; height: 100%; height: 100dvh;
-           background: #c9b6a3; opacity: 0; transition: opacity .25s ease; }
+  /* Starts below the phone's status bar (clock, battery), so the top of the app is never hidden under it. */
+  iframe { position: fixed; top: env(safe-area-inset-top, 0px); right: 0; bottom: 0; left: 0; border: 0; display: block;
+           width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px));
+           opacity: 0; transition: opacity .25s ease; }
   body.ready iframe { opacity: 1; }
-  noscript a { color: #fbf9f6; font-family: Helvetica, Arial, sans-serif; }
+  noscript a { color: #393a34; font-family: Helvetica, Arial, sans-serif; }
 </style>
 </head>
 <body>
@@ -40,6 +42,6 @@
     setTimeout(show, 12000);
   })();
 </script>
-<noscript><style>iframe { opacity: 1; }</style><p style="position:fixed;bottom:0;padding:20px"><a href="https://script.google.com/macros/s/AKfycbw_0H1Wq9k0hkGx2rCQexyinXvl2vGHfhSDW9lPj4MzdyKOGAyTqKGiD_qO-WD9zIfqRg/exec">Open the Ottolive Bakehouse app</a></p></noscript>
+<noscript><style>iframe { opacity: 1; }</style><p style="position:fixed;bottom:0;left:0;right:0;margin:0;padding:20px;background:#fbf9f6"><a href="https://script.google.com/macros/s/AKfycbw_0H1Wq9k0hkGx2rCQexyinXvl2vGHfhSDW9lPj4MzdyKOGAyTqKGiD_qO-WD9zIfqRg/exec">Open the Ottolive Bakehouse app</a></p></noscript>
 </body>
 </html>

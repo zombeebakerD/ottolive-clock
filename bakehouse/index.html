@@ -12,17 +12,36 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="preconnect" href="https://script.google.com">
 <title>Ottolive Bakehouse app</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #fbf9f6; overflow: hidden; }
-  iframe { border: 0; display: block; width: 100%; height: 100%; height: 100dvh; }
+  /* The whole screen is the logo's own colour while Google starts the app, so the icon, the opening screen and the
+     wait all look like one piece. The app fades in over it as soon as Google has loaded it. */
+  html, body { margin: 0; height: 100%; background: #c9b6a3; overflow: hidden; }
+  #splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #c9b6a3; }
+  #splash img { width: 160px; height: 160px; display: block; }
+  /* Starts below the phone's status bar (clock, battery), so the top of the app is never hidden under it. */
+  iframe { position: fixed; top: env(safe-area-inset-top, 0px); right: 0; bottom: 0; left: 0; border: 0; display: block;
+           width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px));
+           opacity: 0; transition: opacity .25s ease; }
+  body.ready iframe { opacity: 1; }
   noscript a { color: #393a34; font-family: Helvetica, Arial, sans-serif; }
 </style>
 </head>
 <body>
 <!-- The live Ottolive Bakehouse app (Google Apps Script), shown inside this page so that the iPad / phone home-screen icon is the
      Ottolive logo and Google's banner does not appear. The app already allows framing (ALLOWALL). Nothing is stored here. -->
+<div id="splash" aria-hidden="true"><img src="icon-512.png" alt=""></div>
 <iframe id="app" title="Ottolive Bakehouse app" src="https://script.google.com/macros/s/AKfycbw_0H1Wq9k0hkGx2rCQexyinXvl2vGHfhSDW9lPj4MzdyKOGAyTqKGiD_qO-WD9zIfqRg/exec" allow="camera; clipboard-write"></iframe>
-<noscript><p style="padding:20px"><a href="https://script.google.com/macros/s/AKfycbw_0H1Wq9k0hkGx2rCQexyinXvl2vGHfhSDW9lPj4MzdyKOGAyTqKGiD_qO-WD9zIfqRg/exec">Open the Ottolive Bakehouse app</a></p></noscript>
+<script>
+  // Show the app once Google has loaded it; never leave anyone on the logo for more than 12 seconds.
+  (function () {
+    var shown = false;
+    function show() { if (shown) return; shown = true; document.body.className = 'ready'; }
+    document.getElementById('app').addEventListener('load', show);
+    setTimeout(show, 12000);
+  })();
+</script>
+<noscript><style>iframe { opacity: 1; }</style><p style="position:fixed;bottom:0;left:0;right:0;margin:0;padding:20px;background:#fbf9f6"><a href="https://script.google.com/macros/s/AKfycbw_0H1Wq9k0hkGx2rCQexyinXvl2vGHfhSDW9lPj4MzdyKOGAyTqKGiD_qO-WD9zIfqRg/exec">Open the Ottolive Bakehouse app</a></p></noscript>
 </body>
 </html>

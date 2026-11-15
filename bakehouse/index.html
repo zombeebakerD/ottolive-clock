@@ -16,14 +16,18 @@
 <script>
   // In the installed Android app, Android first shows its own opening screen with the logo bigger (about 275 dp) and
   // centred on the whole screen, then hands over to this page. Drawing our logo at the same size and spot makes the
-  // hand-over invisible. Measured from Dom's Galaxy video, 15 Nov 2026. iPads, iPhones and browsers keep the 240 logo.
+  // hand-over invisible. iPads, iPhones and browsers keep the 240 logo, centred.
+  // The spot is worked out from the top of this page (half the screen height, less the status bar), never from the
+  // page height: Dom's Galaxy video (15 Nov 2026, 23:20) showed the phone sometimes has not settled the page height
+  // when this runs, which made the logo land 7 px high one time and 6 px low the next.
+  // Galaxy status bar measured in that video: 96 screen pixels = 34.13 page pixels.
   try {
     if (/Android/i.test(navigator.userAgent) && matchMedia('(display-mode: standalone)').matches) {
-      var root = document.documentElement, bars = screen.height - innerHeight, dy = 0;
-      // The page sits between the status bar (about 28 dp) and the navigation bar; Android centres on the whole screen.
-      if (bars > 30 && bars < 200) dy = Math.max(-30, Math.min(30, bars / 2 - 28));
-      root.className = 'android-app';
-      root.style.setProperty('--logo-dy', dy + 'px');
+      document.documentElement.className = 'android-app';
+      var logoMid = screen.height / 2 - 34.13;
+      // Held upright only; sideways, or if the screen size isn't known yet, the 275 logo stays centred on the page.
+      if (screen.height > screen.width && logoMid > 200 && logoMid < 700)
+        document.documentElement.style.setProperty('--logo-mid', logoMid + 'px');
     }
   } catch (e) {}
 </script>
@@ -34,7 +38,8 @@
   html, body { margin: 0; height: 100%; background: #c9b6a3; overflow: hidden; }
   #splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #c9b6a3; }
   #splash img { width: 240px; height: 240px; display: block; }
-  .android-app #splash img { width: 275px; height: 275px; transform: translateY(var(--logo-dy, 0px)); }
+  .android-app #splash img { position: absolute; left: 50%; top: var(--logo-mid, 50%); width: 275px; height: 275px; margin: -137.5px 0 0 -137.5px; }
+  @media (orientation: landscape) { .android-app #splash img { top: 50%; } }
   /* Starts below the phone's status bar (clock, battery), so the top of the app is never hidden under it. */
   iframe { position: fixed; top: env(safe-area-inset-top, 0px); right: 0; bottom: 0; left: 0; border: 0; display: block;
            width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px));

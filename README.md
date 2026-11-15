@@ -11,7 +11,7 @@ Setup on the iPad and how pairing works: see the Ottolive Production README, sec
 
 ## Other pages in this repository
 
-- `foods/`: opens the Ottolive Foods staff app (Battlefield) full-screen, with the Ottolive logo as the home-screen icon.
+- `foods/`: opens the Ottolive Foods staff app (Battlefield) full-screen, with the Ottolive logo (charcoal with a sand O) as the home-screen icon.
 - `bakehouse/`: the same for the Ottolive Bakehouse staff app (Bellstone shop), sand icon.
 - `trade/`: the trade order page.
 

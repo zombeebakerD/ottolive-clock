@@ -89,10 +89,11 @@
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="icon-512.png" alt=""></div>
-<!-- The live trade app (Apps Script "Ottolive Order Intake"). Shown inside this page so Google's
-     "created by a Google Apps Script user" banner does not appear. The app already allows framing (ALLOWALL). -->
+<!-- The live trade order page: its own small Apps Script project since 16 Nov 2026 (security split; it still sends
+     orders to "Ottolive Order Intake"). Shown inside this page so Google's "created by a Google Apps Script user"
+     banner does not appear. The page allows framing (ALLOWALL). Old link, for undo: .../s/AKfycby-PEnt...T9B/exec -->
 <iframe id="app" title="Ottolive trade orders"
-  src="https://script.google.com/macros/s/AKfycby-PEntQ7hcmsR2A5Nm_F_Eas3aC-ooCnOKXqfRBmsADXTbH2jVwRfZpMseF30-sT9B/exec"
+  src="https://script.google.com/macros/s/AKfycbwKs58dZquNrlrNS36774oqQcYAsVN5JH0kCeTbjI6fsm4oXXOYSiB_6Nw7owVLb-QG/exec"
   allow="clipboard-write"></iframe>
 <script>
   // Show the app as soon as Google has loaded it (or after 12 s, so a slow load never hides it), and switch the phone's
@@ -107,6 +108,6 @@
     setTimeout(show, 12000);
   })();
 </script>
-<noscript><style>iframe { opacity: 1; }</style><p style="position:fixed;bottom:0;left:0;right:0;margin:0;padding:20px;background:#d7d2cb"><a href="https://script.google.com/macros/s/AKfycby-PEntQ7hcmsR2A5Nm_F_Eas3aC-ooCnOKXqfRBmsADXTbH2jVwRfZpMseF30-sT9B/exec">Open trade orders</a></p></noscript>
+<noscript><style>iframe { opacity: 1; }</style><p style="position:fixed;bottom:0;left:0;right:0;margin:0;padding:20px;background:#d7d2cb"><a href="https://script.google.com/macros/s/AKfycbwKs58dZquNrlrNS36774oqQcYAsVN5JH0kCeTbjI6fsm4oXXOYSiB_6Nw7owVLb-QG/exec">Open trade orders</a></p></noscript>
 </body>
 </html>

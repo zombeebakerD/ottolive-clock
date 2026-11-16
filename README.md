@@ -13,7 +13,7 @@ Setup on the iPad and how pairing works: see the Ottolive Production README, sec
 
 - `foods/`: opens the Ottolive Foods staff app (Battlefield) full-screen, with the Ottolive logo (charcoal with a sand O) as the home-screen icon.
 - `bakehouse/`: the same for the Ottolive Bakehouse staff app (Bellstone shop), sand icon.
-- `trade/`: the trade order page (wholesale customers). Installable like the staff apps: charcoal icon with a white O, logo opening screen, plain-colour start-up pictures in `trade/startup/`.
+- `trade/`: the trade order page (wholesale customers). Installable like the staff apps: olive green icon (#5f6b3a) with a charcoal O, logo opening screen, plain-colour start-up pictures in `trade/startup/`.
 
 These are thin frames around the Google Apps Script apps. No data or code of the apps lives here.
 

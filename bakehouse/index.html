@@ -63,21 +63,15 @@
 <link rel="apple-touch-startup-image" media="(device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="startup/2752x2064.png">
 <link rel="preconnect" href="https://script.google.com">
 <script>
-  // In the installed Android app, Android first shows its own opening screen with the logo bigger (about 275 dp) and
-  // centred on the whole screen, then hands over to this page. Drawing our logo at the same size and spot makes the
-  // hand-over invisible. iPads, iPhones and browsers keep the 240 logo, centred.
-  // The spot is worked out from the top of this page (half the screen height, less the status bar), never from the
-  // page height: Dom's Galaxy video (15 Nov 2026, 23:20) showed the phone sometimes has not settled the page height
-  // when this runs, which made the logo land 7 px high one time and 6 px low the next.
-  // Galaxy status bar measured in that video: 96 screen pixels = 34.13 page pixels.
+  // In the installed Android app, Android shows its own opening screen (the logo, placed by Android on every phone).
+  // This page then draws no logo of its own there, so nothing on the page counts as content and Chrome keeps
+  // Android's screen up until the page has loaded (which waits for the app in the frame), then shows the app.
+  // Chosen by Dom 15 Nov 2026 after testing on his S25: the same on every Android phone, no per-phone numbers.
+  // (Matching our own logo to Android's needed each phone's status bar height; see git history before this change.)
+  // iPads, iPhones and browsers keep the 240 logo, fading in over the logo-colour start-up screen.
   try {
-    if (/Android/i.test(navigator.userAgent) && matchMedia('(display-mode: standalone)').matches) {
+    if (/Android/i.test(navigator.userAgent) && matchMedia('(display-mode: standalone)').matches)
       document.documentElement.className = 'android-app';
-      var logoMid = screen.height / 2 - 34.13;
-      // Held upright only; sideways, or if the screen size isn't known yet, the 275 logo stays centred on the page.
-      if (screen.height > screen.width && logoMid > 200 && logoMid < 700)
-        document.documentElement.style.setProperty('--logo-mid', logoMid + 'px');
-    }
   } catch (e) {}
 </script>
 <title>Ottolive Bakehouse app</title>
@@ -89,8 +83,8 @@
   #splash img { width: 240px; height: 240px; display: block; animation: logo-in .4s ease-out both; }
   @keyframes logo-in { from { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { #splash img { animation: none; } }
-  .android-app #splash img { position: absolute; left: 50%; top: var(--logo-mid, 50%); width: 275px; height: 275px; margin: -137.5px 0 0 -137.5px; animation: none; }
-  @media (orientation: landscape) { .android-app #splash img { top: 50%; } }
+  /* Installed Android: no logo of our own, so Android keeps its own opening screen until the app is ready. */
+  .android-app #splash img { display: none; }
   /* Starts below the phone's status bar (clock, battery), so the top of the app is never hidden under it. */
   iframe { position: fixed; top: env(safe-area-inset-top, 0px); right: 0; bottom: 0; left: 0; border: 0; display: block;
            width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px));

@@ -79,7 +79,7 @@
   /* The whole screen is the logo's own colour while Google starts the app, so the icon, the opening screen and the
      wait all look like one piece. The app fades in over it as soon as Google has loaded it. */
   html, body { margin: 0; height: 100%; background: #c9b6a3; overflow: hidden; }
-  #splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #c9b6a3; }
+  #splash { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; background: #c9b6a3; }
   #splash img { width: 240px; height: 240px; display: block; animation: logo-in .4s ease-out both; }
   @keyframes logo-in { from { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { #splash img { animation: none; } }
@@ -87,8 +87,12 @@
   .android-app #splash img { display: none; }
   /* Starts below the phone's status bar (clock, battery), so the top of the app is never hidden under it. */
   iframe { position: fixed; top: env(safe-area-inset-top, 0px); right: 0; bottom: 0; left: 0; border: 0; display: block;
-           width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px));
+           width: 100%; height: calc(100vh - env(safe-area-inset-top, 0px));
            opacity: 0; transition: opacity .25s ease; }
+  /* Newer phones and iPads use the dynamic height. It sits behind @supports on purpose: iPads older than iPadOS 15.4 do
+     not know dvh, and a dvh line that also uses env() is not skipped there; it wipes the height instead, so the app showed
+     as a 150px strip at the top with the logo screen below it (shop iPad, 17 Nov 2026). */
+  @supports (height: 100dvh) { iframe { height: calc(100dvh - env(safe-area-inset-top, 0px)); } }
   body.ready iframe { opacity: 1; }
   noscript a { color: #393a34; font-family: Helvetica, Arial, sans-serif; }
 </style>

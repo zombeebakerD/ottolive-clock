@@ -1,7 +1,8 @@
 # Ottolive clock-in terminal
 
 The clock-in screen for the iPad in the Ottolive Foods production room, served by GitHub Pages at
-https://zombeebakerd.github.io/ottolive-clock/
+https://apps.ottolive.co.uk/ (custom domain set by the `CNAME` file; the old address
+https://zombeebakerd.github.io/ottolive-clock/ forwards to it)
 
 It is one page, `index.html`. It uses the iPad's front camera with the top half blurred (the face is never
 stored), takes the photo the moment a PIN is confirmed, and saves everything into the Ottolive Production
